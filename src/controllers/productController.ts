@@ -6,6 +6,8 @@ import CustomErrorHandler from '../services/CustomErrorHandler';
 import fs from 'fs';
 import productSchema from '../validators/productValidators';
 import { ObjectId } from 'mongoose';
+import { IProduct } from '../models/product';
+import { paginationPipeLine } from '../aggregationPipelinePagination';
 
 type DestinationCallback = (error: Error | null, destination: string) => void;
 type FileNameCallback = (error: Error | null, filename: string) => void;
@@ -150,33 +152,48 @@ async function destroy(req: Request, res: Response, next: NextFunction) {
 
 async function index(req: Request, res: Response, next: NextFunction) {
   try {
-    let { page, size } = req.query;
+    // let { page, size } = req.query;
 
-    if (!page) {
-      page = "1";
-    }
-    if (!size) {
-      size = "5";
-    }
+    // if (!page) {
+    //   page = "1";
+    // }
+    // if (!size) {
+    //   size = "5";
+    // }
 
-    const limit = parseInt(size as string);
-    const skip = (Number(page) - 1) * Number(size);
+    // const limit = parseInt(size as string);
+    // const skip = (Number(page) - 1) * Number(size);
 
     const documents = await Product.find()
-      .limit(limit)
-      .skip(skip)
+      // .limit(limit)
+      // .skip(skip)
       .select("-updatedAt -__v")
       .sort({ _id: -1 });
 
     return res.json({
-      page,
-      size,
+      // page,
+      // size,
       data: documents,
     });
   } catch (error) {
     return next(CustomErrorHandler.serverError());
   }
 }
+
+
+async function productsWithPagination (req: Request, res: Response, next: NextFunction ) {
+
+  try {
+    const paginatedProducts = await Product.aggregate(
+      paginationPipeLine<IProduct>(req.query.page as string , { size: 'L' }),
+    );
+    
+    res.json({data: paginatedProducts});
+
+  } catch (error) {
+    return next(CustomErrorHandler.serverError());
+  }
+};
 
 async function show(req: Request, res: Response, next: NextFunction) {
   let document;
